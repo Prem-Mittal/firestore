@@ -1,12 +1,12 @@
 import "./App.css";
 import { useEffect, useState } from "react";
-import { app,storage } from "./firebaseConfig";
-import {  ref,uploadBytesResumable,getDownloadURL } from "firebase/storage";
+import { app,storage,database } from "./firebaseConfig";
+import {  ref,addDoc,uploadBytesResumable,getDownloadURL,onSnapshot, collection } from "firebase/firestore";
 
-//import {collection,addDoc,getDocs, updateDoc,doc,deleteDoc} from "firebase/firestore";
+import {getAuth,createUserWithEmailAndPassword} from "firebase/auth";
 
 function App() {
-  // const auth = getAuth();
+  const auth = getAuth();
   // const googleProvider=new GoogleAuthProvider();
   // const provider = new GithubAuthProvider();
   const [data, setData] = useState({
@@ -14,19 +14,19 @@ function App() {
     password: "",
   });
 
-  //const collectionRef=collection(database,'users');
+  const collectionRef=collection(database,'users');
 
   
 
-  // const addData = () => {
-  //   signInWithPopup(auth, googleProvider)
-  //   .then((response)=>{
-  //     console.log(response.user);
-  //   })
-  //   .catch((err)=>{
-  //     alert(err.message);
-  //   });
-  // };
+  const addData = () => {
+    createUserWithEmailAndPassword(auth, data.email,data.password)
+    .then((response)=>{
+      console.log(response.user);
+    })
+    .catch((err)=>{
+      alert(err.message);
+    });
+  };
 
   // const handlelogout = () => {
   //  addDoc(collectionRef,{
@@ -88,33 +88,43 @@ function App() {
   // }, []);
 
   const handleSubmit=()=>{
-    const storageRef = ref(storage, `images/${data.name}`);  //This line creates a reference to the file you want to upload in Firebase Cloud Storage.
-    const uploadTask = uploadBytesResumable(storageRef, data); //This line initiates the upload task using the uploadBytesResumable function. data should be the file you want to upload. This function returns an upload task that can be used to monitor the upload progress and handle its completion.
-    uploadTask.on('state_changed',(snapshot)=> {  //This sets up event listeners for the upload task:
-      //'state_changed'   : This event listener monitors the upload state and calculates the upload progress percentage.
-      //(error) => { ... }: This function handles errors that may occur during the upload process.
-      //() => { ... }: This function runs when the upload is complete. It retrieves the download URL of the uploaded file using getDownloadURL and logs it to the console.
-      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-      console.log('Upload is ' + progress + '% done');
-    },(error)=>{
-      console.log(error.message);
-    },
-    ()=>{
-      getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-        console.log('File available at', downloadURL);
-      });
-    }
-  )};
+    addData();
+    onSnapshot(collectionRef,(data)=>{
+      console.log(
+        data.docs.map((item)=>{
+          return item.data();
+        })
+      )
+    })
+  };
+  const handleEmailChange = (event) => {
+    // Update the email field in the 'data' state
+    setData({ ...data, email: event.target.value });
+  };
+
+  const handlePasswordChange = (event) => {
+    // Update the password field in the 'data' state
+    setData({ ...data, password: event.target.value });
+  };
   return (
     <div className="App-header">
       <input
-        type="file"
+        type="email"
         className="input-fields"
-        onChange={(event) => setData(event.target.files[0])}
+        onChange={handleEmailChange}
+        value={data.email}
       />
-
-      {/* <button onClick={addData}>Log In</button> */}
-      <button onClick={handleSubmit}>Log out</button>
+      <input
+        type="password"
+        className="input-fields"
+        onChange={handlePasswordChange}
+        value={data.password}
+      />
+      <input
+        type="submit"
+        className="input-fields"
+        onClick={handleSubmit}
+      />
     </div>
   );
 }
